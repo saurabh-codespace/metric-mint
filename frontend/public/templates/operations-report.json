@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "Operations pulse",
+  "description": "Queue performance and team utilization, populated from the database-backed sample reports.",
+  "widgets": [
+    {
+      "id": "queue-trend",
+      "title": "Resolved cases",
+      "sourceType": "workbook",
+      "sourceId": "queue-management",
+      "chart": "area",
+      "labelKey": "date",
+      "valueKey": "resolved",
+      "columns": ["date", "received", "resolved", "openCases"],
+      "width": "half"
+    },
+    {
+      "id": "team-utilization",
+      "title": "Utilization by team",
+      "sourceType": "workbook",
+      "sourceId": "utilization",
+      "chart": "bar",
+      "labelKey": "team",
+      "valueKey": "utilizationPercent",
+      "columns": ["team", "availableHours", "billableHours", "utilizationPercent"],
+      "width": "half"
+    },
+    {
+      "id": "queue-table",
+      "title": "Queue detail",
+      "sourceType": "workbook",
+      "sourceId": "queue-management",
+      "chart": "table",
+      "labelKey": "date",
+      "valueKey": "resolved",
+      "columns": ["date", "received", "resolved", "openCases", "outsideSla"],
+      "width": "full"
+    }
+  ]
+}

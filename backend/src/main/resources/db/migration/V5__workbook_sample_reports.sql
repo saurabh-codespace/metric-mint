@@ -1,0 +1,51 @@
+-- Synthetic examples of five reports named in the supplied workbook; no enterprise records.
+-- Snapshot: 2026-10-09. Queue starts with 124 open cases before the first day.
+CREATE TABLE toscana_insights.workbook_sample_rows (
+    report_id varchar(40) NOT NULL,
+    row_order int NOT NULL CHECK (row_order > 0),
+    data_json nvarchar(max) NOT NULL,
+    CONSTRAINT pk_workbook_sample_rows PRIMARY KEY (report_id, row_order)
+);
+
+INSERT INTO toscana_insights.workbook_sample_rows (report_id, row_order, data_json) VALUES
+('queue-management', 1, '{"date":"2026-10-02","received":82,"resolved":79,"openCases":127,"outsideSla":19,"cycleHours":12.4}'),
+('queue-management', 2, '{"date":"2026-10-03","received":91,"resolved":86,"openCases":132,"outsideSla":18,"cycleHours":12.1}'),
+('queue-management', 3, '{"date":"2026-10-04","received":88,"resolved":94,"openCases":126,"outsideSla":16,"cycleHours":11.8}'),
+('queue-management', 4, '{"date":"2026-10-05","received":103,"resolved":101,"openCases":128,"outsideSla":17,"cycleHours":11.3}'),
+('queue-management', 5, '{"date":"2026-10-06","received":97,"resolved":102,"openCases":123,"outsideSla":15,"cycleHours":10.9}'),
+('queue-management', 6, '{"date":"2026-10-07","received":110,"resolved":108,"openCases":125,"outsideSla":14,"cycleHours":10.2}'),
+('queue-management', 7, '{"date":"2026-10-08","received":105,"resolved":113,"openCases":117,"outsideSla":12,"cycleHours":9.8}'),
+('queue-management', 8, '{"date":"2026-10-09","received":118,"resolved":123,"openCases":112,"outsideSla":10,"cycleHours":9.4}'),
+('on-hold', 1, '{"category":"Access requests","heldCases":24,"averageHoldHours":19.5,"over48Hours":3}'),
+('on-hold', 2, '{"category":"Data corrections","heldCases":18,"averageHoldHours":32.2,"over48Hours":6}'),
+('on-hold', 3, '{"category":"Invoice queries","heldCases":31,"averageHoldHours":41.6,"over48Hours":11}'),
+('on-hold', 4, '{"category":"System incidents","heldCases":12,"averageHoldHours":14.3,"over48Hours":1}'),
+('on-hold', 5, '{"category":"Approval pending","heldCases":28,"averageHoldHours":52.1,"over48Hours":17}'),
+('on-hold', 6, '{"category":"Master data","heldCases":16,"averageHoldHours":27.8,"over48Hours":4}'),
+('on-hold', 7, '{"category":"Account setup","heldCases":9,"averageHoldHours":18.2,"over48Hours":0}'),
+('on-hold', 8, '{"category":"Reporting requests","heldCases":14,"averageHoldHours":35.4,"over48Hours":5}'),
+('csat-dashboard', 1, '{"date":"2026-10-02","responses":45,"satisfied":38,"scorePercent":84.44}'),
+('csat-dashboard', 2, '{"date":"2026-10-03","responses":52,"satisfied":45,"scorePercent":86.54}'),
+('csat-dashboard', 3, '{"date":"2026-10-04","responses":48,"satisfied":42,"scorePercent":87.5}'),
+('csat-dashboard', 4, '{"date":"2026-10-05","responses":61,"satisfied":54,"scorePercent":88.52}'),
+('csat-dashboard', 5, '{"date":"2026-10-06","responses":58,"satisfied":53,"scorePercent":91.38}'),
+('csat-dashboard', 6, '{"date":"2026-10-07","responses":64,"satisfied":59,"scorePercent":92.19}'),
+('csat-dashboard', 7, '{"date":"2026-10-08","responses":70,"satisfied":65,"scorePercent":92.86}'),
+('csat-dashboard', 8, '{"date":"2026-10-09","responses":76,"satisfied":72,"scorePercent":94.74}'),
+('savings-collection', 1, '{"week":"2026-08-21","automationUsd":4200,"processUsd":1800,"totalUsd":6000,"hoursSaved":120}'),
+('savings-collection', 2, '{"week":"2026-08-28","automationUsd":4650,"processUsd":1950,"totalUsd":6600,"hoursSaved":132}'),
+('savings-collection', 3, '{"week":"2026-09-04","automationUsd":4800,"processUsd":2200,"totalUsd":7000,"hoursSaved":140}'),
+('savings-collection', 4, '{"week":"2026-09-11","automationUsd":5300,"processUsd":2150,"totalUsd":7450,"hoursSaved":149}'),
+('savings-collection', 5, '{"week":"2026-09-18","automationUsd":5750,"processUsd":2600,"totalUsd":8350,"hoursSaved":167}'),
+('savings-collection', 6, '{"week":"2026-09-25","automationUsd":6100,"processUsd":2850,"totalUsd":8950,"hoursSaved":179}'),
+('savings-collection', 7, '{"week":"2026-10-02","automationUsd":6450,"processUsd":3050,"totalUsd":9500,"hoursSaved":190}'),
+('savings-collection', 8, '{"week":"2026-10-09","automationUsd":7100,"processUsd":3300,"totalUsd":10400,"hoursSaved":208}'),
+('utilization', 1, '{"team":"Analytics","availableHours":400,"billableHours":328,"trainingHours":32,"utilizationPercent":82}'),
+('utilization', 2, '{"team":"Service desk","availableHours":320,"billableHours":278,"trainingHours":20,"utilizationPercent":86.88}'),
+('utilization', 3, '{"team":"Finance ops","availableHours":360,"billableHours":295,"trainingHours":28,"utilizationPercent":81.94}'),
+('utilization', 4, '{"team":"Master data","availableHours":280,"billableHours":224,"trainingHours":24,"utilizationPercent":80}'),
+('utilization', 5, '{"team":"Engineering","availableHours":400,"billableHours":356,"trainingHours":20,"utilizationPercent":89}'),
+('utilization', 6, '{"team":"Quality","availableHours":240,"billableHours":192,"trainingHours":24,"utilizationPercent":80}'),
+('utilization', 7, '{"team":"Automation","availableHours":320,"billableHours":288,"trainingHours":16,"utilizationPercent":90}'),
+('utilization', 8, '{"team":"Customer care","availableHours":360,"billableHours":306,"trainingHours":28,"utilizationPercent":85}');
+

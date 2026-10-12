@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:toscana_insights;MODE=MSSQLServer;DB_CLOSE_DELAY=-1;INIT=CREATE SCHEMA IF NOT EXISTS toscana_insights
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate.default_schema: toscana_insights
+  flyway:
+    enabled: false
+app:
+  security:
+    demo-username: demo@toscana-insights.local
+    demo-password: demo123!
+    secret-key: ZGV2LW9ubHktMzItYnl0ZS1rZXktY2hhbmdlLW1lISE=
+  ingestion:
+    allowed-hosts: localhost
+    allow-private-addresses: true
+    scheduler-enabled: false
+    retry-delay-ms: 10

@@ -1,0 +1,72 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+
+(async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const output = path.resolve(__dirname, '../test-results');
+  await fs.mkdir(output, { recursive: true });
+  try {
+    await page.goto('http://127.0.0.1:5173');
+    await page.getByLabel('Username', { exact: true }).fill(process.env.METRIC_MINT_TEST_USERNAME || 'admin');
+    await page.getByLabel('Password', { exact: true }).fill(process.env.METRIC_MINT_TEST_PASSWORD || 'admin');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.getByRole('heading', { name: 'Invoice performance', exact: true }).waitFor({ timeout: 30000 });
+    const rows = await page.evaluate(async () => {
+      const { api } = await import('/src/api/client.ts');
+      return api.getDashboardInvoices();
+    });
+    assert.ok(rows.length > 5000, 'Database sample records returned');
+    const unauthorized = await page.request.get('http://127.0.0.1:8090/api/dashboard/sample-invoices');
+    assert.equal(unauthorized.status(), 401, 'Sample endpoint requires authentication');
+    const countValue = () => page.locator('.executive-kpi').nth(1).locator('.executive-kpi-value').innerText();
+    assert.equal(await countValue(), rows.filter(row => row.age < 30).length.toLocaleString('en-US'));
+    await page.getByLabel('Business unit', { exact: true }).selectOption('Finance');
+    await page.getByLabel('Date range').selectOption('7');
+    assert.equal(await countValue(), rows.filter(row => row.age < 7 && row.unit === 'Finance').length.toLocaleString('en-US'));
+    await page.getByLabel('Business unit', { exact: true }).selectOption('all');
+    await page.getByLabel('Date range').selectOption('30');
+    await page.getByRole('button', { name: 'Value', exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: 'Value', exact: true }).getAttribute('aria-pressed'), 'true');
+    await page.getByRole('button', { name: 'Volume', exact: true }).click();
+    await page.getByRole('button', { name: 'Review exceptions' }).click();
+    assert.equal(await page.getByLabel('Invoice status').inputValue(), 'Exception');
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export data' }).click();
+    const download = await downloadPromise;
+    const csvPath = path.join(output, download.suggestedFilename());
+    await download.saveAs(csvPath);
+    const csv = await fs.readFile(csvPath, 'utf8');
+    assert.equal(csv.split('\r\n').length - 1, rows.filter(row => row.age < 30 && row.status === 'Exception').length);
+    await page.getByLabel('Search invoices').fill('no-such-vendor');
+    await page.getByRole('heading', { name: 'No invoices found' }).waitFor();
+    await page.getByRole('button', { name: 'Clear filters' }).click();
+    await page.getByRole('button', { name: 'Next invoice page' }).click();
+    assert.match(await page.locator('.invoice-panel footer').innerText(), /Page 2/);
+    await page.getByRole('button', { name: 'Previous invoice page' }).click();
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.screenshot({ path: path.join(output, 'dashboard-desktop.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Metrics & KPIs', exact: true }).click();
+    await page.getByRole('heading', { name: 'Every metric. A clearer picture.' }).waitFor();
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.getByRole('heading', { name: 'Invoice performance', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
+    assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+    await page.screenshot({ path: path.join(output, 'dashboard-dark.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole('button', { name: 'Open navigation' }).click();
+    await page.locator('.sidebar').getByRole('button', { name: 'Close navigation' }).click();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow on mobile');
+    await page.screenshot({ path: path.join(output, 'dashboard-mobile.png'), fullPage: true });
+    assert.deepEqual(errors, [], 'No browser runtime errors');
+    console.log(`PASS: ${rows.length} database invoices; authentication, KPI reconciliation, filters, charts, search, pagination, CSV, metrics navigation, dark theme, mobile layout.`);
+  } finally {
+    await browser.close();
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

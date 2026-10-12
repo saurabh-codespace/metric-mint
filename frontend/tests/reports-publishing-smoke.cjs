@@ -1,0 +1,105 @@
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+
+(async () => {
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  const output = path.resolve(__dirname, '../test-results');
+  await fs.mkdir(output, { recursive: true });
+  let publicationId;
+  const login = async target => {
+    await target.getByLabel('Username', { exact: true }).fill(process.env.METRIC_MINT_TEST_USERNAME || 'admin');
+    await target.getByLabel('Password', { exact: true }).fill(process.env.METRIC_MINT_TEST_PASSWORD || 'admin');
+    await target.getByRole('button', { name: 'Sign in', exact: true }).click();
+  };
+  try {
+    await page.goto('http://127.0.0.1:5173');
+    await login(page);
+    await page.getByRole('button', { name: 'Overview', exact: true }).click();
+    await page.getByRole('heading', { name: 'Invoice performance', exact: true }).waitFor();
+    await page.screenshot({ path: path.join(output, 'modern-overview.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Reports', exact: true }).click();
+    await page.getByRole('heading', { name: 'Queue Management Dashboard', exact: true }).waitFor();
+    assert.equal(await page.locator('.studio-report-card').count(), 5);
+    const reports = await page.evaluate(async () => (await import('/src/api/workbooks.ts')).workbooks.list());
+    assert.equal(reports.length, 5);
+    assert.equal(reports.reduce((sum, report) => sum + report.data.length, 0), 40);
+    await page.screenshot({ path: path.join(output, 'modern-report-gallery.png'), fullPage: true });
+    await page.getByLabel('Search workbook reports').fill('Savings');
+    assert.equal(await page.locator('.studio-report-card').count(), 1);
+    await page.getByLabel('Search workbook reports').fill('');
+    for (const report of reports) {
+      await page.getByRole('button', { name: `Open ${report.title}`, exact: true }).click();
+      await page.locator('.report-workspace h1').filter({ hasText: report.title }).waitFor();
+      assert.equal(await page.locator('.report-data-panel tbody tr').count(), report.data.length);
+      await page.getByLabel('Report visualization').selectOption('table');
+      assert.equal(await page.locator('.report-chart-panel tbody tr').count(), report.data.length);
+      await page.getByLabel('Report visualization').selectOption('line');
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Export CSV', exact: true }).click();
+      const download = await downloadPromise;
+      const file = path.join(output, download.suggestedFilename());
+      await download.saveAs(file);
+      assert.equal((await fs.readFile(file, 'utf8')).split('\r\n').length, report.data.length + 1);
+      await page.getByRole('button', { name: 'All workbook reports' }).click();
+    }
+    await page.getByRole('button', { name: 'Open Queue Management Dashboard', exact: true }).click();
+    await page.getByLabel('Report visualization').selectOption('area');
+    await page.screenshot({ path: path.join(output, 'modern-queue-report.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Publish dashboard', exact: true }).click();
+    await page.getByLabel('Dashboard name', { exact: true }).fill('Browser check — queue dashboard');
+    await page.getByRole('button', { name: 'Publish and create link' }).click();
+    const link = page.getByLabel('Shareable dashboard link', { exact: true });
+    await link.waitFor();
+    const url = await link.inputValue();
+    assert.match(url, /#\/published\/[A-Za-z0-9_-]{43}$/);
+    const token = url.split('/').pop();
+    publicationId = await page.evaluate(async token => (await (await import('/src/api/publications.ts')).publications.get(token)).id, token);
+    await page.screenshot({ path: path.join(output, 'publish-dashboard.png'), fullPage: true });
+    const anonymous = await browser.newContext();
+    const shared = await anonymous.newPage();
+    shared.on('pageerror', error => errors.push(error.message));
+    await shared.goto(url);
+    await shared.getByRole('heading', { name: 'Sign in to your workspace' }).waitFor();
+    assert.equal((await shared.request.get(`http://127.0.0.1:8090/api/published-dashboards/token/${token}`)).status(), 401);
+    await login(shared);
+    await shared.getByRole('heading', { name: 'Browser check — queue dashboard', exact: true }).waitFor();
+    assert.equal(await shared.getByLabel('Report visualization').inputValue(), 'area');
+    await shared.reload();
+    await shared.getByRole('heading', { name: 'Browser check — queue dashboard', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await page.getByRole('button', { name: 'All workbook reports' }).click();
+    await page.getByRole('button', { name: 'Published dashboards', exact: true }).click();
+    const card = page.locator('.publication-card').filter({ hasText: 'Browser check — queue dashboard' });
+    await card.getByRole('button', { name: 'Revoke link' }).click();
+    await card.getByRole('button', { name: 'Confirm revoke' }).click();
+    await card.waitFor({ state: 'detached' });
+    publicationId = undefined;
+    await shared.reload();
+    await shared.getByRole('heading', { name: 'Dashboard unavailable' }).waitFor();
+    await anonymous.close();
+    await page.getByRole('button', { name: 'Workbook reports', exact: true }).click();
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
+    await page.screenshot({ path: path.join(output, 'modern-report-gallery-dark.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Toggle theme' }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Report gallery fits mobile');
+    await page.screenshot({ path: path.join(output, 'modern-report-gallery-mobile.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Open Queue Management Dashboard', exact: true }).click();
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Report detail fits mobile');
+    await page.screenshot({ path: path.join(output, 'modern-report-mobile.png'), fullPage: true });
+    assert.deepEqual(errors, [], 'No browser runtime errors');
+    console.log('PASS: five Excel reports, 40 database rows, charts/tables, CSV, search, token publication, fresh-session sign-in, reload persistence, revocation, dark mode and mobile.');
+  } catch (error) {
+    await page.screenshot({ path: path.join(output, 'reports-failure.png'), fullPage: true });
+    throw error;
+  } finally {
+    if (publicationId) await page.evaluate(async id => (await import('/src/api/publications.ts')).publications.revoke(id), publicationId).catch(() => {});
+    await browser.close();
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

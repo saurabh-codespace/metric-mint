@@ -1,0 +1,51 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+AGENTS.md
+.local-tools/
+.github-profile/
+.claude-flow/
+/$null
+
+# Private source documents and database files
+*.xlsx
+*.xls
+*.bak
+*.mdf
+*.ldf
+*.dump
+
+# Java / Spring Boot
+backend/target/
+*.class
+*.jar
+*.war
+.gradle/
+build/
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+node_modules/
+dist/
+
+# Test and runtime output
+coverage/
+frontend/test-results/
+logs/
+*.log
+tmp/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
